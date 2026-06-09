@@ -11,7 +11,7 @@
 // Automatically switches between localhost and your live backend server
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:5000/api'
-  : 'https://sprint30-xxxx.onrender.com/api'; // <-- Put your REAL Render link here and add /api
+  : 'https://sprint30.onrender.com'; // <-- Put your REAL Render link here and add /api
 
 const TOKEN_KEY = 'sprint30_token';
 const EMAIL_KEY = 'sprint30_email';
