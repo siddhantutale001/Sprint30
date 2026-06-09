@@ -409,7 +409,7 @@ function initDashboard() {
   if (DOM.userAvatar) DOM.userAvatar.textContent = email.charAt(0).toUpperCase();
 
   renderTrackSelector();
-  
+
   // Call renderRoadmap() immediately after the auth check passes on dashboard load
   renderRoadmap(currentTrack);
 }
@@ -476,16 +476,16 @@ async function toggleTask(taskId, cardEl) {
   try {
     const res = await api.patch('/api/roadmap/toggle', { task_id: taskId });
     const completed = res.completed;
-    
+
     // Update UI based on response
     cardEl.classList.toggle('completed', completed);
     cardEl.querySelector('.checkbox').checked = completed;
-    
+
     if (completed) {
       showToast('Task completed! 🎯', 'success', 2000);
       celebrateCompletion(cardEl);
     }
-    
+
     await loadStats();
   } catch (err) {
     showToast('Failed to sync progress', 'error');
@@ -495,13 +495,13 @@ async function toggleTask(taskId, cardEl) {
 async function renderRoadmap(track = 'Full-Stack') {
   const grid = DOM.dayGridContainer;
   if (!grid) return;
-  
+
   grid.innerHTML = buildSkeletonHTML();
 
   try {
     const { tasks, stats } = await fetchRoadmap(track);
     grid.innerHTML = '';
-    
+
     const wrapper = document.createElement('div');
     wrapper.className = 'day-grid';
 
@@ -522,14 +522,14 @@ async function renderRoadmap(track = 'Full-Stack') {
           <span class="day-tag">${escapeHtml(task.track)}</span>
         </div>
       `;
-      
+
       card.querySelector('.checkbox').addEventListener('change', () => {
         toggleTask(task.task_id, card);
       });
-      
+
       wrapper.appendChild(card);
     });
-    
+
     grid.appendChild(wrapper);
     updateStats(stats);
   } catch (err) {
@@ -539,11 +539,13 @@ async function renderRoadmap(track = 'Full-Stack') {
 }
 
 function updateStats(stats) {
-  if (DOM.statCompleted) animateCounter(DOM.statCompleted, stats.completed);
-  if (DOM.statRemaining) animateCounter(DOM.statRemaining, stats.remaining);
-  if (DOM.statProgress) DOM.statProgress.textContent = `${stats.percentage}%`;
-  if (DOM.progressPct) DOM.progressPct.textContent = `${stats.percentage}%`;
-  if (DOM.progressFill) DOM.progressFill.style.width = `${stats.percentage}%`;
+  const completedEl = document.querySelector('[data-stat="completed"]');
+  const percentageEl = document.querySelector('[data-stat="percentage"]');
+  const remainingEl = document.querySelector('[data-stat="remaining"]');
+
+  if (completedEl) completedEl.textContent = stats.completed;
+  if (percentageEl) percentageEl.textContent = stats.percentage + '%';
+  if (remainingEl) remainingEl.textContent = stats.remaining;
 }
 
 async function loadStats() {
