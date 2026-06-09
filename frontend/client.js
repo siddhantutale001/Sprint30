@@ -10,118 +10,14 @@
 
 // ── Configuration ──────────────────────────────
 // Automatically switches between localhost and your live backend server.
-// NOTE: Do NOT include /api here — endpoint paths already include it.
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:5000'
   : 'https://sprint30.onrender.com';
 
 const TOKEN_KEY = 'sprint30_token';
 const EMAIL_KEY = 'sprint30_email';
-const PROGRESS_KEY = 'sprint30_progress';   // localStorage fallback for progress
 
-// ── 30-Day Roadmap Data ────────────────────────
-// Each track has 30 tasks. The frontend ships with
-// a built-in curriculum; the backend can override it.
-const TRACKS = {
-  'Full-Stack': [
-    'HTML5 Semantic Elements & Accessibility',
-    'CSS Flexbox Deep Dive',
-    'CSS Grid Mastery',
-    'JavaScript ES6+ Fundamentals',
-    'DOM Manipulation & Events',
-    'Async JavaScript — Promises & Async/Await',
-    'Fetch API & REST Principles',
-    'Node.js Core Concepts',
-    'Express.js Routing & Middleware',
-    'MySQL Schema Design & Queries',
-    'Database Joins & Indexing',
-    'JWT Authentication Flow',
-    'Password Hashing with Bcrypt',
-    'CORS & Security Headers',
-    'Environment Variables & Config',
-    'Error Handling Patterns',
-    'Input Validation & Sanitization',
-    'File Uploads & Multer',
-    'React Component Architecture',
-    'React State & Props',
-    'React Hooks — useState & useEffect',
-    'React Router & Navigation',
-    'API Integration in React',
-    'Responsive Design Patterns',
-    'Testing with Jest & RTL',
-    'CI/CD Pipeline Basics',
-    'Docker Fundamentals',
-    'Deploying to Render',
-    'Performance Optimization',
-    'Capstone Project — Full-Stack App',
-  ],
-  'Frontend': [
-    'HTML5 Semantic Markup',
-    'CSS Selectors & Specificity',
-    'CSS Custom Properties (Variables)',
-    'Flexbox Layout Patterns',
-    'CSS Grid — Real-world Layouts',
-    'CSS Animations & Transitions',
-    'Responsive Design & Media Queries',
-    'JavaScript Fundamentals Review',
-    'DOM Traversal & Manipulation',
-    'Event Delegation & Bubbling',
-    'ES6 Modules & Bundling Concepts',
-    'Fetch API & Handling Responses',
-    'LocalStorage & SessionStorage',
-    'Form Validation Patterns',
-    'Accessibility (a11y) Best Practices',
-    'React — JSX & Component Basics',
-    'React — Props, State & Lifecycle',
-    'React — Hooks Deep Dive',
-    'React — Context API & Global State',
-    'React Router v6',
-    'Styled Components / CSS Modules',
-    'State Management with Zustand',
-    'Data Fetching with React Query',
-    'Building a Design System',
-    'Performance — Code Splitting & Lazy Loading',
-    'Web Vitals & Lighthouse',
-    'Progressive Web Apps (PWA)',
-    'Testing — Vitest & RTL',
-    'Storybook for Component Docs',
-    'Capstone — Portfolio Dashboard',
-  ],
-  'Backend': [
-    'Node.js Runtime & Event Loop',
-    'NPM & Package Management',
-    'Express.js — Hello World Server',
-    'Routing & Route Parameters',
-    'Middleware Chain & Custom Middleware',
-    'Request Parsing — Body, Query, Params',
-    'MySQL — Installation & CLI',
-    'Schema Design & Normalization',
-    'CRUD Operations with mysql2',
-    'Prepared Statements & SQL Injection',
-    'Connection Pooling',
-    'Transactions & ACID',
-    'Authentication — JWT Theory',
-    'Implementing Signup & Login',
-    'Password Hashing & Salting',
-    'Protected Routes & Middleware',
-    'Role-Based Access Control',
-    'File Uploads & Cloud Storage',
-    'Rate Limiting & Throttling',
-    'Error Handling & Logging (Winston)',
-    'Environment Config & dotenv',
-    'API Versioning Strategies',
-    'WebSockets with Socket.io',
-    'Background Jobs & Queues',
-    'Caching with Redis',
-    'Automated Testing — Mocha & Chai',
-    'API Documentation — Swagger',
-    'Docker & Containerization',
-    'CI/CD with GitHub Actions',
-    'Capstone — Production-Ready API',
-  ],
-};
-
-const TRACK_NAMES = Object.keys(TRACKS);
+const TRACK_NAMES = ['Full-Stack', 'Frontend', 'Backend'];
 
 // =============================================
 // Utility Helpers
@@ -170,57 +66,6 @@ const Auth = {
 };
 
 // =============================================
-// Progress Persistence (localStorage fallback)
-// =============================================
-// The backend may not yet have roadmap endpoints,
-// so we persist progress locally per user.
-const Progress = {
-  _key() {
-    const payload = decodeToken(Auth.getToken());
-    const uid = payload?.id || 'anon';
-    return `${PROGRESS_KEY}_${uid}`;
-  },
-  load() {
-    return safeParse(localStorage.getItem(this._key()), {});
-  },
-  save(data) {
-    localStorage.setItem(this._key(), JSON.stringify(data));
-  },
-  toggle(track, dayIndex) {
-    const data = this.load();
-    if (!data[track]) data[track] = [];
-    const idx = data[track].indexOf(dayIndex);
-    if (idx === -1) {
-      data[track].push(dayIndex);
-    } else {
-      data[track].splice(idx, 1);
-    }
-    this.save(data);
-    return data;
-  },
-  isCompleted(track, dayIndex) {
-    const data = this.load();
-    return (data[track] || []).includes(dayIndex);
-  },
-  getStats() {
-    const data = this.load();
-    let completed = 0;
-    let total = 0;
-    for (const track of TRACK_NAMES) {
-      total += TRACKS[track].length;
-      completed += (data[track] || []).length;
-    }
-    return { completed, total, remaining: total - completed };
-  },
-  getTrackStats(track) {
-    const data = this.load();
-    const completed = (data[track] || []).length;
-    const total = TRACKS[track].length;
-    return { completed, total };
-  }
-};
-
-// =============================================
 // API Client
 // =============================================
 async function apiRequest(endpoint, options = {}) {
@@ -242,7 +87,7 @@ async function apiRequest(endpoint, options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    const error = new Error(data.message || 'Request failed');
+    const error = new Error(data.message || data.error || 'Request failed');
     error.status = response.status;
     error.data = data;
     throw error;
@@ -256,6 +101,8 @@ const api = {
     apiRequest(endpoint, { method: 'POST', body: JSON.stringify(body) }),
   get: (endpoint) =>
     apiRequest(endpoint, { method: 'GET' }),
+  patch: (endpoint, body) =>
+    apiRequest(endpoint, { method: 'PATCH', body: JSON.stringify(body) }),
 };
 
 // =============================================
@@ -281,9 +128,6 @@ function showToast(message, type = 'info', duration = 3500) {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-// We wrap DOM references in a getter pattern so they
-// resolve at access time, not at script parse time.
-// This prevents null-ref crashes if the DOM isn't ready yet.
 const DOM = {};
 
 function initDOMRefs() {
@@ -326,7 +170,7 @@ function initDOMRefs() {
 // View Routing
 // =============================================
 let currentTrack = TRACK_NAMES[0];
-let pendingOtpEmail = '';   // tracks which email is being verified
+let pendingOtpEmail = '';
 
 function showView(view) {
   if (DOM.authView) DOM.authView.classList.toggle('hidden', view !== 'auth');
@@ -360,7 +204,6 @@ function setAuthMode(mode) {
   if (DOM.tabSignup) DOM.tabSignup.setAttribute('aria-selected', !isLogin);
   if (DOM.loginForm) DOM.loginForm.classList.toggle('hidden', !isLogin);
   if (DOM.signupForm) DOM.signupForm.classList.toggle('hidden', isLogin);
-  // Clear messages
   if (DOM.loginMsg) hideMessage(DOM.loginMsg);
   if (DOM.signupMsg) hideMessage(DOM.signupMsg);
 }
@@ -396,11 +239,9 @@ function setLoading(btn, loading) {
 // Auth — Event Bindings
 // =============================================
 function bindAuthEvents() {
-  // Tab switching
   if (DOM.tabLogin) DOM.tabLogin.addEventListener('click', () => setAuthMode('login'));
   if (DOM.tabSignup) DOM.tabSignup.addEventListener('click', () => setAuthMode('signup'));
 
-  // ── Login ──
   if (DOM.loginForm) {
     DOM.loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -423,7 +264,6 @@ function bindAuthEvents() {
         showView('dashboard');
         initDashboard();
       } catch (err) {
-        // If backend says account needs verification, show OTP view
         if (err.data && err.data.requiresVerification) {
           pendingOtpEmail = email;
           showOtpView(email);
@@ -437,7 +277,6 @@ function bindAuthEvents() {
     });
   }
 
-  // ── Signup ──
   if (DOM.signupForm) {
     DOM.signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -466,8 +305,6 @@ function bindAuthEvents() {
 
       try {
         await api.post('/api/auth/signup', { email, password });
-
-        // Transition to OTP verification view
         pendingOtpEmail = email;
         showOtpView(email);
         showToast('Account created! Check your email for the verification code. 📧', 'success');
@@ -488,12 +325,10 @@ function showOtpView(email) {
   if (DOM.otpInput) DOM.otpInput.value = '';
   hideMessage(DOM.otpMsg);
   showView('otp');
-  // Focus the input after transition
   setTimeout(() => { if (DOM.otpInput) DOM.otpInput.focus(); }, 300);
 }
 
 function bindOtpEvents() {
-  // ── Verify OTP ──
   if (DOM.otpForm) {
     DOM.otpForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -511,10 +346,8 @@ function bindOtpEvents() {
       try {
         await api.post('/api/auth/verify-otp', { email: pendingOtpEmail, otp });
         showToast('Email verified successfully! 🎉 Please log in.', 'success');
-        // Go back to login
         showView('auth');
         setAuthMode('login');
-        // Pre-fill email for convenience
         const loginEmailInput = $('#login-email');
         if (loginEmailInput) loginEmailInput.value = pendingOtpEmail;
         pendingOtpEmail = '';
@@ -526,7 +359,6 @@ function bindOtpEvents() {
     });
   }
 
-  // ── Resend OTP ──
   if (DOM.otpResendBtn) {
     DOM.otpResendBtn.addEventListener('click', async () => {
       if (!pendingOtpEmail) return;
@@ -539,7 +371,6 @@ function bindOtpEvents() {
         showToast('New verification code sent! 📧', 'success');
         showMessage(DOM.otpMsg, 'A new code has been sent to your email.', 'success');
 
-        // Cooldown: disable resend for 30 seconds
         let countdown = 30;
         DOM.otpResendBtn.textContent = `Resend in ${countdown}s`;
         const timer = setInterval(() => {
@@ -560,7 +391,6 @@ function bindOtpEvents() {
     });
   }
 
-  // ── Back to Signup ──
   if (DOM.otpBackBtn) {
     DOM.otpBackBtn.addEventListener('click', () => {
       pendingOtpEmail = '';
@@ -574,32 +404,25 @@ function bindOtpEvents() {
 // Dashboard — Initialization
 // =============================================
 function initDashboard() {
-  // Set user info
   const email = Auth.getEmail();
   if (DOM.userEmailDisplay) DOM.userEmailDisplay.textContent = email;
   if (DOM.userAvatar) DOM.userAvatar.textContent = email.charAt(0).toUpperCase();
 
-  // Build track selector
   renderTrackSelector();
-
-  // Render current track
-  renderDayGrid(currentTrack);
-
-  // Update stats
-  updateStats();
+  
+  // Call renderRoadmap() immediately after the auth check passes on dashboard load
+  renderRoadmap(currentTrack);
 }
 
 // =============================================
 // Dashboard — Event Bindings
 // =============================================
 function bindDashboardEvents() {
-  // ── Logout ──
   if (DOM.logoutBtn) {
     DOM.logoutBtn.addEventListener('click', () => {
       Auth.clearSession();
       showToast('Logged out successfully', 'info');
       showView('auth');
-      // Reset forms
       if (DOM.loginForm) DOM.loginForm.reset();
       if (DOM.signupForm) DOM.signupForm.reset();
       setAuthMode('login');
@@ -614,19 +437,6 @@ function renderTrackSelector() {
   if (!DOM.trackSelector) return;
   DOM.trackSelector.innerHTML = '';
 
-  // "All" button
-  const allBtn = document.createElement('button');
-  allBtn.className = 'track-btn' + (currentTrack === '__all__' ? ' active' : '');
-  allBtn.textContent = '🌐 All Tracks';
-  allBtn.addEventListener('click', () => {
-    currentTrack = '__all__';
-    updateTrackButtons();
-    renderDayGrid(currentTrack);
-    updateStats();
-  });
-  DOM.trackSelector.appendChild(allBtn);
-
-  // Individual track buttons
   const icons = { 'Full-Stack': '⚡', 'Frontend': '🎨', 'Backend': '⚙️' };
   TRACK_NAMES.forEach(name => {
     const btn = document.createElement('button');
@@ -635,8 +445,7 @@ function renderTrackSelector() {
     btn.addEventListener('click', () => {
       currentTrack = name;
       updateTrackButtons();
-      renderDayGrid(name);
-      updateStats();
+      renderRoadmap(name);
     });
     DOM.trackSelector.appendChild(btn);
   });
@@ -646,176 +455,103 @@ function updateTrackButtons() {
   if (!DOM.trackSelector) return;
   const buttons = DOM.trackSelector.querySelectorAll('.track-btn');
   buttons.forEach((btn, i) => {
-    const isAll = i === 0;
-    const matchTrack = isAll ? '__all__' : TRACK_NAMES[i - 1];
-    btn.classList.toggle('active', currentTrack === matchTrack);
+    btn.classList.toggle('active', currentTrack === TRACK_NAMES[i]);
   });
 
   if (DOM.trackBadge) {
-    DOM.trackBadge.textContent = currentTrack === '__all__' ? 'All Tracks' : currentTrack;
+    DOM.trackBadge.textContent = currentTrack;
   }
 }
 
 // =============================================
-// Dashboard — Day Grid Rendering
+// API Roadmap Functions
 // =============================================
-function renderDayGrid(track) {
-  const container = DOM.dayGridContainer;
-  if (!container) return;
 
-  // Show skeleton briefly
-  container.innerHTML = buildSkeletonHTML();
-
-  // Simulate async load feel
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      if (track === '__all__') {
-        renderAllTracks(container);
-      } else {
-        renderSingleTrack(container, track);
-      }
-    }, 150);
-  });
+async function fetchRoadmap(track = 'Full-Stack') {
+  const res = await api.get(`/api/roadmap?track=${track}`);
+  return res; // api wrapper already returns json body
 }
 
-function renderSingleTrack(container, track) {
-  const tasks = TRACKS[track];
-  if (!tasks) {
-    container.innerHTML = buildEmptyState('Track not found');
-    return;
+async function toggleTask(taskId, cardEl) {
+  try {
+    const res = await api.patch('/api/roadmap/toggle', { task_id: taskId });
+    const completed = res.completed;
+    
+    // Update UI based on response
+    cardEl.classList.toggle('completed', completed);
+    cardEl.querySelector('.checkbox').checked = completed;
+    
+    if (completed) {
+      showToast('Task completed! 🎯', 'success', 2000);
+      celebrateCompletion(cardEl);
+    }
+    
+    await loadStats();
+  } catch (err) {
+    showToast('Failed to sync progress', 'error');
   }
-
-  const grid = document.createElement('div');
-  grid.className = 'day-grid';
-
-  tasks.forEach((task, index) => {
-    grid.appendChild(createDayCard(track, index, task));
-  });
-
-  container.innerHTML = '';
-  container.appendChild(grid);
 }
 
-function renderAllTracks(container) {
-  container.innerHTML = '';
+async function renderRoadmap(track = 'Full-Stack') {
+  const grid = DOM.dayGridContainer;
+  if (!grid) return;
+  
+  grid.innerHTML = buildSkeletonHTML();
 
-  TRACK_NAMES.forEach(track => {
-    const header = document.createElement('div');
-    header.className = 'section-header';
-    header.style.marginTop = '24px';
-    header.innerHTML = `
-      <h3>${track}</h3>
-      <span class="section-badge">${Progress.getTrackStats(track).completed}/${TRACKS[track].length}</span>
-    `;
+  try {
+    const { tasks, stats } = await fetchRoadmap(track);
+    grid.innerHTML = '';
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'day-grid';
 
-    const grid = document.createElement('div');
-    grid.className = 'day-grid';
-    grid.style.marginBottom = '16px';
-
-    TRACKS[track].forEach((task, index) => {
-      grid.appendChild(createDayCard(track, index, task));
+    tasks.forEach(task => {
+      const card = document.createElement('div');
+      // Adapting the user's logic to maintain existing CSS styles (day-card, day-check, etc)
+      card.className = `day-card ${task.completed ? 'completed' : ''}`;
+      card.innerHTML = `
+        <label class="day-check">
+          <input type="checkbox" class="checkbox" ${task.completed ? 'checked' : ''} aria-label="Mark task complete" />
+          <span class="checkmark">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </label>
+        <div class="day-info">
+          <div class="day-number">Day ${task.day_number}</div>
+          <div class="day-title">${escapeHtml(task.title)}</div>
+          <span class="day-tag">${escapeHtml(task.track)}</span>
+        </div>
+      `;
+      
+      card.querySelector('.checkbox').addEventListener('change', () => {
+        toggleTask(task.task_id, card);
+      });
+      
+      wrapper.appendChild(card);
     });
-
-    container.appendChild(header);
-    container.appendChild(grid);
-  });
+    
+    grid.appendChild(wrapper);
+    updateStats(stats);
+  } catch (err) {
+    console.error('Failed to render roadmap:', err);
+    grid.innerHTML = buildEmptyState('Failed to load roadmap tasks');
+  }
 }
 
-function createDayCard(track, index, task) {
-  const card = document.createElement('div');
-  const isCompleted = Progress.isCompleted(track, index);
-  card.className = `day-card${isCompleted ? ' completed' : ''}`;
-
-  card.innerHTML = `
-    <label class="day-check">
-      <input type="checkbox" ${isCompleted ? 'checked' : ''} aria-label="Mark day ${index + 1} complete" />
-      <span class="checkmark">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-      </span>
-    </label>
-    <div class="day-info">
-      <div class="day-number">Day ${index + 1}</div>
-      <div class="day-title">${escapeHtml(task)}</div>
-      <span class="day-tag">${track}</span>
-    </div>
-  `;
-
-  // Checkbox toggle
-  const checkbox = card.querySelector('input[type="checkbox"]');
-  checkbox.addEventListener('change', () => {
-    const checked = checkbox.checked;
-    card.classList.toggle('completed', checked);
-    Progress.toggle(track, index);
-    updateStats();
-
-    // Sync to backend (fire and forget)
-    syncProgressToBackend(track, index, checked);
-
-    if (checked) {
-      showToast(`Day ${index + 1} completed! 🎯`, 'success', 2000);
-      celebrateCompletion(card);
-    }
-
-    // Check for track completion
-    const stats = Progress.getTrackStats(track);
-    if (stats.completed === stats.total && checked) {
-      setTimeout(() => {
-        showToast(`🏆 ${track} track complete! Incredible!`, 'success', 5000);
-        launchConfetti();
-      }, 500);
-    }
-  });
-
-  return card;
-}
-
-// =============================================
-// Dashboard — Stats Update
-// =============================================
-function updateStats() {
-  const stats = Progress.getStats();
-  const pct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
-
-  // Animate counter
+function updateStats(stats) {
   if (DOM.statCompleted) animateCounter(DOM.statCompleted, stats.completed);
   if (DOM.statRemaining) animateCounter(DOM.statRemaining, stats.remaining);
-  if (DOM.statProgress) DOM.statProgress.textContent = `${pct}%`;
-  if (DOM.progressPct) DOM.progressPct.textContent = `${pct}%`;
-  if (DOM.progressFill) DOM.progressFill.style.width = `${pct}%`;
+  if (DOM.statProgress) DOM.statProgress.textContent = `${stats.percentage}%`;
+  if (DOM.progressPct) DOM.progressPct.textContent = `${stats.percentage}%`;
+  if (DOM.progressFill) DOM.progressFill.style.width = `${stats.percentage}%`;
 }
 
-function animateCounter(el, target) {
-  if (!el) return;
-  const current = parseInt(el.textContent) || 0;
-  if (current === target) return;
-
-  const diff = target - current;
-  const steps = Math.min(Math.abs(diff), 15);
-  const stepSize = diff / steps;
-  let step = 0;
-
-  const interval = setInterval(() => {
-    step++;
-    if (step >= steps) {
-      el.textContent = target;
-      clearInterval(interval);
-    } else {
-      el.textContent = Math.round(current + stepSize * step);
-    }
-  }, 30);
-}
-
-// =============================================
-// Backend Sync (Fire & Forget)
-// =============================================
-// This calls a /api/progress endpoint if it exists.
-// If the endpoint doesn't exist yet, it fails silently
-// and progress is preserved in localStorage.
-async function syncProgressToBackend(track, dayIndex, completed) {
+async function loadStats() {
   try {
-    await api.post('/api/progress', { track, dayIndex, completed });
-  } catch {
-    // Backend endpoint may not exist yet — silently fall back to localStorage
+    const { stats } = await fetchRoadmap(currentTrack);
+    updateStats(stats);
+  } catch (err) {
+    console.error('Failed to load stats:', err);
   }
 }
 
@@ -858,14 +594,11 @@ function launchConfetti() {
       transform: `translateX(0) rotate(0deg)`,
     });
 
-    // Inject keyframes dynamically
     piece.style.setProperty('--drift', `${drift}px`);
     piece.style.setProperty('--rotation', `${rotation}deg`);
-
     burst.appendChild(piece);
   }
 
-  // Inject confetti animation if not already present
   if (!document.getElementById('confetti-style')) {
     const style = document.createElement('style');
     style.id = 'confetti-style';
@@ -907,8 +640,9 @@ function buildEmptyState(msg) {
 // Security Helpers
 // =============================================
 function escapeHtml(str) {
+  if (!str) return '';
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-  return str.replace(/[&<>"']/g, c => map[c]);
+  return String(str).replace(/[&<>"']/g, c => map[c]);
 }
 
 // =============================================

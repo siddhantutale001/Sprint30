@@ -8,6 +8,7 @@ const cors    = require('cors');
 
 const { testConnection } = require('./config/database');
 const authRoutes          = require('./routes/authRoutes');
+const roadmapRoutes       = require('./routes/roadmapRoutes');
 const verifyToken         = require('./middleware/verifyToken');
 
 const app  = express();
@@ -42,6 +43,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── Public Routes ──────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/roadmap', roadmapRoutes);
 
 // ── Protected Routes (example) ─────────────────
 app.get('/api/protected', verifyToken, (req, res) => {
