@@ -2,16 +2,18 @@
 // Sprint30 — Frontend Client  (Vanilla JS)
 // =============================================
 // Self-contained module: auth flow, JWT handling,
-// 30-day roadmap grid, checkbox sync, toasts.
+// OTP verification, 30-day roadmap grid, checkbox
+// sync, toasts.
 // =============================================
 
 'use strict';
 
 // ── Configuration ──────────────────────────────
-// Automatically switches between localhost and your live backend server
+// Automatically switches between localhost and your live backend server.
+// NOTE: Do NOT include /api here — endpoint paths already include it.
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:5000/api'
-  : 'https://sprint30.onrender.com'; // <-- Put your REAL Render link here and add /api
+  ? 'http://localhost:5000'
+  : 'https://sprint30.onrender.com';
 
 const TOKEN_KEY = 'sprint30_token';
 const EMAIL_KEY = 'sprint30_email';
@@ -261,6 +263,7 @@ const api = {
 // =============================================
 function showToast(message, type = 'info', duration = 3500) {
   const container = document.getElementById('toast-container');
+  if (!container) return;
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
@@ -273,49 +276,70 @@ function showToast(message, type = 'info', duration = 3500) {
 }
 
 // =============================================
-// DOM References
+// DOM References (lazy-safe)
 // =============================================
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-const DOM = {
-  app: $('#app'),
-  authView: $('#auth-view'),
-  dashView: $('#dashboard-view'),
+// We wrap DOM references in a getter pattern so they
+// resolve at access time, not at script parse time.
+// This prevents null-ref crashes if the DOM isn't ready yet.
+const DOM = {};
+
+function initDOMRefs() {
+  DOM.app = $('#app');
+  DOM.authView = $('#auth-view');
+  DOM.otpView = $('#otp-view');
+  DOM.dashView = $('#dashboard-view');
   // Auth
-  tabLogin: $('#tab-login'),
-  tabSignup: $('#tab-signup'),
-  loginForm: $('#login-form'),
-  signupForm: $('#signup-form'),
-  loginBtn: $('#login-btn'),
-  signupBtn: $('#signup-btn'),
-  loginMsg: $('#login-message'),
-  signupMsg: $('#signup-message'),
+  DOM.tabLogin = $('#tab-login');
+  DOM.tabSignup = $('#tab-signup');
+  DOM.loginForm = $('#login-form');
+  DOM.signupForm = $('#signup-form');
+  DOM.loginBtn = $('#login-btn');
+  DOM.signupBtn = $('#signup-btn');
+  DOM.loginMsg = $('#login-message');
+  DOM.signupMsg = $('#signup-message');
+  // OTP
+  DOM.otpForm = $('#otp-form');
+  DOM.otpInput = $('#otp-input');
+  DOM.otpVerifyBtn = $('#otp-verify-btn');
+  DOM.otpMsg = $('#otp-message');
+  DOM.otpEmailDisplay = $('#otp-email-display');
+  DOM.otpResendBtn = $('#otp-resend-btn');
+  DOM.otpBackBtn = $('#otp-back-btn');
   // Dashboard
-  logoutBtn: $('#logout-btn'),
-  userAvatar: $('#user-avatar'),
-  userEmailDisplay: $('#user-email-display'),
-  statCompleted: $('#stat-completed'),
-  statProgress: $('#stat-progress'),
-  statRemaining: $('#stat-remaining'),
-  progressPct: $('#progress-pct-label'),
-  progressFill: $('#progress-fill'),
-  trackSelector: $('#track-selector'),
-  trackBadge: $('#track-badge'),
-  dayGridContainer: $('#day-grid-container'),
-};
+  DOM.logoutBtn = $('#logout-btn');
+  DOM.userAvatar = $('#user-avatar');
+  DOM.userEmailDisplay = $('#user-email-display');
+  DOM.statCompleted = $('#stat-completed');
+  DOM.statProgress = $('#stat-progress');
+  DOM.statRemaining = $('#stat-remaining');
+  DOM.progressPct = $('#progress-pct-label');
+  DOM.progressFill = $('#progress-fill');
+  DOM.trackSelector = $('#track-selector');
+  DOM.trackBadge = $('#track-badge');
+  DOM.dayGridContainer = $('#day-grid-container');
+}
 
 // =============================================
 // View Routing
 // =============================================
 let currentTrack = TRACK_NAMES[0];
+let pendingOtpEmail = '';   // tracks which email is being verified
 
 function showView(view) {
-  DOM.authView.classList.toggle('hidden', view !== 'auth');
-  DOM.dashView.classList.toggle('hidden', view !== 'dashboard');
+  if (DOM.authView) DOM.authView.classList.toggle('hidden', view !== 'auth');
+  if (DOM.otpView) DOM.otpView.classList.toggle('hidden', view !== 'otp');
+  if (DOM.dashView) DOM.dashView.classList.toggle('hidden', view !== 'dashboard');
 }
 
 function initApp() {
+  initDOMRefs();
+  bindAuthEvents();
+  bindOtpEvents();
+  bindDashboardEvents();
+
   if (Auth.isLoggedIn()) {
     showView('dashboard');
     initDashboard();
@@ -330,34 +354,34 @@ function initApp() {
 // =============================================
 function setAuthMode(mode) {
   const isLogin = mode === 'login';
-  DOM.tabLogin.classList.toggle('active', isLogin);
-  DOM.tabSignup.classList.toggle('active', !isLogin);
-  DOM.tabLogin.setAttribute('aria-selected', isLogin);
-  DOM.tabSignup.setAttribute('aria-selected', !isLogin);
-  DOM.loginForm.classList.toggle('hidden', !isLogin);
-  DOM.signupForm.classList.toggle('hidden', isLogin);
+  if (DOM.tabLogin) DOM.tabLogin.classList.toggle('active', isLogin);
+  if (DOM.tabSignup) DOM.tabSignup.classList.toggle('active', !isLogin);
+  if (DOM.tabLogin) DOM.tabLogin.setAttribute('aria-selected', isLogin);
+  if (DOM.tabSignup) DOM.tabSignup.setAttribute('aria-selected', !isLogin);
+  if (DOM.loginForm) DOM.loginForm.classList.toggle('hidden', !isLogin);
+  if (DOM.signupForm) DOM.signupForm.classList.toggle('hidden', isLogin);
   // Clear messages
-  hideMessage(DOM.loginMsg);
-  hideMessage(DOM.signupMsg);
+  if (DOM.loginMsg) hideMessage(DOM.loginMsg);
+  if (DOM.signupMsg) hideMessage(DOM.signupMsg);
 }
-
-DOM.tabLogin.addEventListener('click', () => setAuthMode('login'));
-DOM.tabSignup.addEventListener('click', () => setAuthMode('signup'));
 
 // =============================================
 // Auth — Message Helpers
 // =============================================
 function showMessage(el, text, type = 'error') {
+  if (!el) return;
   el.textContent = text;
   el.className = `auth-message ${type}`;
   el.classList.remove('hidden');
 }
 
 function hideMessage(el) {
+  if (!el) return;
   el.classList.add('hidden');
 }
 
 function setLoading(btn, loading) {
+  if (!btn) return;
   if (loading) {
     btn.disabled = true;
     btn.dataset.originalHtml = btn.innerHTML;
@@ -369,82 +393,182 @@ function setLoading(btn, loading) {
 }
 
 // =============================================
-// Auth — Login
+// Auth — Event Bindings
 // =============================================
-DOM.loginForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  hideMessage(DOM.loginMsg);
+function bindAuthEvents() {
+  // Tab switching
+  if (DOM.tabLogin) DOM.tabLogin.addEventListener('click', () => setAuthMode('login'));
+  if (DOM.tabSignup) DOM.tabSignup.addEventListener('click', () => setAuthMode('signup'));
 
-  const email = $('#login-email').value.trim();
-  const password = $('#login-password').value;
+  // ── Login ──
+  if (DOM.loginForm) {
+    DOM.loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideMessage(DOM.loginMsg);
 
-  if (!email || !password) {
-    showMessage(DOM.loginMsg, 'Please fill in all fields.');
-    return;
+      const email = $('#login-email').value.trim();
+      const password = $('#login-password').value;
+
+      if (!email || !password) {
+        showMessage(DOM.loginMsg, 'Please fill in all fields.');
+        return;
+      }
+
+      setLoading(DOM.loginBtn, true);
+
+      try {
+        const res = await api.post('/api/auth/login', { email, password });
+        Auth.setSession(res.data.token, email);
+        showToast('Welcome back! 🎉', 'success');
+        showView('dashboard');
+        initDashboard();
+      } catch (err) {
+        // If backend says account needs verification, show OTP view
+        if (err.data && err.data.requiresVerification) {
+          pendingOtpEmail = email;
+          showOtpView(email);
+          showToast('Please verify your email first.', 'info');
+        } else {
+          showMessage(DOM.loginMsg, err.message || 'Login failed. Please try again.');
+        }
+      } finally {
+        setLoading(DOM.loginBtn, false);
+      }
+    });
   }
 
-  setLoading(DOM.loginBtn, true);
+  // ── Signup ──
+  if (DOM.signupForm) {
+    DOM.signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideMessage(DOM.signupMsg);
 
-  try {
-    const res = await api.post('/api/auth/login', { email, password });
-    Auth.setSession(res.data.token, email);
-    showToast('Welcome back! 🎉', 'success');
-    showView('dashboard');
-    initDashboard();
-  } catch (err) {
-    showMessage(DOM.loginMsg, err.message || 'Login failed. Please try again.');
-  } finally {
-    setLoading(DOM.loginBtn, false);
+      const email = $('#signup-email').value.trim();
+      const password = $('#signup-password').value;
+      const confirm = $('#signup-confirm').value;
+
+      if (!email || !password || !confirm) {
+        showMessage(DOM.signupMsg, 'Please fill in all fields.');
+        return;
+      }
+
+      if (password.length < 6) {
+        showMessage(DOM.signupMsg, 'Password must be at least 6 characters.');
+        return;
+      }
+
+      if (password !== confirm) {
+        showMessage(DOM.signupMsg, 'Passwords do not match.');
+        return;
+      }
+
+      setLoading(DOM.signupBtn, true);
+
+      try {
+        await api.post('/api/auth/signup', { email, password });
+
+        // Transition to OTP verification view
+        pendingOtpEmail = email;
+        showOtpView(email);
+        showToast('Account created! Check your email for the verification code. 📧', 'success');
+      } catch (err) {
+        showMessage(DOM.signupMsg, err.message || 'Signup failed. Please try again.');
+      } finally {
+        setLoading(DOM.signupBtn, false);
+      }
+    });
   }
-});
+}
 
 // =============================================
-// Auth — Signup
+// OTP Verification — View & Events
 // =============================================
-DOM.signupForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  hideMessage(DOM.signupMsg);
+function showOtpView(email) {
+  if (DOM.otpEmailDisplay) DOM.otpEmailDisplay.textContent = email;
+  if (DOM.otpInput) DOM.otpInput.value = '';
+  hideMessage(DOM.otpMsg);
+  showView('otp');
+  // Focus the input after transition
+  setTimeout(() => { if (DOM.otpInput) DOM.otpInput.focus(); }, 300);
+}
 
-  const email = $('#signup-email').value.trim();
-  const password = $('#signup-password').value;
-  const confirm = $('#signup-confirm').value;
+function bindOtpEvents() {
+  // ── Verify OTP ──
+  if (DOM.otpForm) {
+    DOM.otpForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideMessage(DOM.otpMsg);
 
-  if (!email || !password || !confirm) {
-    showMessage(DOM.signupMsg, 'Please fill in all fields.');
-    return;
+      const otp = DOM.otpInput ? DOM.otpInput.value.trim() : '';
+
+      if (!otp || otp.length !== 6) {
+        showMessage(DOM.otpMsg, 'Please enter the 6-digit code.');
+        return;
+      }
+
+      setLoading(DOM.otpVerifyBtn, true);
+
+      try {
+        await api.post('/api/auth/verify-otp', { email: pendingOtpEmail, otp });
+        showToast('Email verified successfully! 🎉 Please log in.', 'success');
+        // Go back to login
+        showView('auth');
+        setAuthMode('login');
+        // Pre-fill email for convenience
+        const loginEmailInput = $('#login-email');
+        if (loginEmailInput) loginEmailInput.value = pendingOtpEmail;
+        pendingOtpEmail = '';
+      } catch (err) {
+        showMessage(DOM.otpMsg, err.message || 'Verification failed. Please try again.');
+      } finally {
+        setLoading(DOM.otpVerifyBtn, false);
+      }
+    });
   }
 
-  if (password.length < 6) {
-    showMessage(DOM.signupMsg, 'Password must be at least 6 characters.');
-    return;
+  // ── Resend OTP ──
+  if (DOM.otpResendBtn) {
+    DOM.otpResendBtn.addEventListener('click', async () => {
+      if (!pendingOtpEmail) return;
+
+      DOM.otpResendBtn.disabled = true;
+      DOM.otpResendBtn.textContent = 'Sending…';
+
+      try {
+        await api.post('/api/auth/resend-otp', { email: pendingOtpEmail });
+        showToast('New verification code sent! 📧', 'success');
+        showMessage(DOM.otpMsg, 'A new code has been sent to your email.', 'success');
+
+        // Cooldown: disable resend for 30 seconds
+        let countdown = 30;
+        DOM.otpResendBtn.textContent = `Resend in ${countdown}s`;
+        const timer = setInterval(() => {
+          countdown--;
+          if (countdown <= 0) {
+            clearInterval(timer);
+            DOM.otpResendBtn.disabled = false;
+            DOM.otpResendBtn.textContent = 'Resend Code';
+          } else {
+            DOM.otpResendBtn.textContent = `Resend in ${countdown}s`;
+          }
+        }, 1000);
+      } catch (err) {
+        showMessage(DOM.otpMsg, err.message || 'Failed to resend code.');
+        DOM.otpResendBtn.disabled = false;
+        DOM.otpResendBtn.textContent = 'Resend Code';
+      }
+    });
   }
 
-  if (password !== confirm) {
-    showMessage(DOM.signupMsg, 'Passwords do not match.');
-    return;
+  // ── Back to Signup ──
+  if (DOM.otpBackBtn) {
+    DOM.otpBackBtn.addEventListener('click', () => {
+      pendingOtpEmail = '';
+      showView('auth');
+      setAuthMode('signup');
+    });
   }
-
-  setLoading(DOM.signupBtn, true);
-
-  try {
-    await api.post('/api/auth/signup', { email, password });
-    showMessage(DOM.signupMsg, 'Account created! Logging you in…', 'success');
-
-    // Auto-login after signup
-    const loginRes = await api.post('/api/auth/login', { email, password });
-    Auth.setSession(loginRes.data.token, email);
-
-    setTimeout(() => {
-      showToast('Account created successfully! 🚀', 'success');
-      showView('dashboard');
-      initDashboard();
-    }, 800);
-  } catch (err) {
-    showMessage(DOM.signupMsg, err.message || 'Signup failed. Please try again.');
-  } finally {
-    setLoading(DOM.signupBtn, false);
-  }
-});
+}
 
 // =============================================
 // Dashboard — Initialization
@@ -452,8 +576,8 @@ DOM.signupForm.addEventListener('submit', async (e) => {
 function initDashboard() {
   // Set user info
   const email = Auth.getEmail();
-  DOM.userEmailDisplay.textContent = email;
-  DOM.userAvatar.textContent = email.charAt(0).toUpperCase();
+  if (DOM.userEmailDisplay) DOM.userEmailDisplay.textContent = email;
+  if (DOM.userAvatar) DOM.userAvatar.textContent = email.charAt(0).toUpperCase();
 
   // Build track selector
   renderTrackSelector();
@@ -466,22 +590,28 @@ function initDashboard() {
 }
 
 // =============================================
-// Dashboard — Logout
+// Dashboard — Event Bindings
 // =============================================
-DOM.logoutBtn.addEventListener('click', () => {
-  Auth.clearSession();
-  showToast('Logged out successfully', 'info');
-  showView('auth');
-  // Reset forms
-  DOM.loginForm.reset();
-  DOM.signupForm.reset();
-  setAuthMode('login');
-});
+function bindDashboardEvents() {
+  // ── Logout ──
+  if (DOM.logoutBtn) {
+    DOM.logoutBtn.addEventListener('click', () => {
+      Auth.clearSession();
+      showToast('Logged out successfully', 'info');
+      showView('auth');
+      // Reset forms
+      if (DOM.loginForm) DOM.loginForm.reset();
+      if (DOM.signupForm) DOM.signupForm.reset();
+      setAuthMode('login');
+    });
+  }
+}
 
 // =============================================
 // Dashboard — Track Selector
 // =============================================
 function renderTrackSelector() {
+  if (!DOM.trackSelector) return;
   DOM.trackSelector.innerHTML = '';
 
   // "All" button
@@ -513,15 +643,17 @@ function renderTrackSelector() {
 }
 
 function updateTrackButtons() {
+  if (!DOM.trackSelector) return;
   const buttons = DOM.trackSelector.querySelectorAll('.track-btn');
-  const labels = ['🌐 All Tracks', ...TRACK_NAMES.map(n => n)];
   buttons.forEach((btn, i) => {
     const isAll = i === 0;
     const matchTrack = isAll ? '__all__' : TRACK_NAMES[i - 1];
     btn.classList.toggle('active', currentTrack === matchTrack);
   });
 
-  DOM.trackBadge.textContent = currentTrack === '__all__' ? 'All Tracks' : currentTrack;
+  if (DOM.trackBadge) {
+    DOM.trackBadge.textContent = currentTrack === '__all__' ? 'All Tracks' : currentTrack;
+  }
 }
 
 // =============================================
@@ -529,6 +661,7 @@ function updateTrackButtons() {
 // =============================================
 function renderDayGrid(track) {
   const container = DOM.dayGridContainer;
+  if (!container) return;
 
   // Show skeleton briefly
   container.innerHTML = buildSkeletonHTML();
@@ -644,14 +777,15 @@ function updateStats() {
   const pct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
 
   // Animate counter
-  animateCounter(DOM.statCompleted, stats.completed);
-  animateCounter(DOM.statRemaining, stats.remaining);
-  DOM.statProgress.textContent = `${pct}%`;
-  DOM.progressPct.textContent = `${pct}%`;
-  DOM.progressFill.style.width = `${pct}%`;
+  if (DOM.statCompleted) animateCounter(DOM.statCompleted, stats.completed);
+  if (DOM.statRemaining) animateCounter(DOM.statRemaining, stats.remaining);
+  if (DOM.statProgress) DOM.statProgress.textContent = `${pct}%`;
+  if (DOM.progressPct) DOM.progressPct.textContent = `${pct}%`;
+  if (DOM.progressFill) DOM.progressFill.style.width = `${pct}%`;
 }
 
 function animateCounter(el, target) {
+  if (!el) return;
   const current = parseInt(el.textContent) || 0;
   if (current === target) return;
 

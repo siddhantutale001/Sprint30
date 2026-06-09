@@ -7,10 +7,13 @@ USE auth_db;
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
-    id          INT UNSIGNED    NOT NULL AUTO_INCREMENT,
-    email       VARCHAR(255)    NOT NULL,
-    password_hash VARCHAR(255)  NOT NULL,
-    created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+    email           VARCHAR(255)    NOT NULL,
+    password_hash   VARCHAR(255)    NOT NULL,
+    is_verified     BOOLEAN         NOT NULL DEFAULT FALSE,
+    otp_code        VARCHAR(6)      NULL,
+    otp_expires_at  DATETIME        NULL,
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_email (email)

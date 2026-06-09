@@ -910,6 +910,98 @@ body::before {
 }
 
 /* ===========================================
+   OTP VERIFICATION VIEW
+   =========================================== */
+#otp-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.otp-email-display {
+  text-align: center;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--accent-secondary);
+  background: rgba(99, 102, 241, .08);
+  border: 1px solid rgba(99, 102, 241, .15);
+  border-radius: var(--radius-full);
+  padding: 8px 20px;
+  margin-bottom: 24px;
+  word-break: break-all;
+}
+
+.otp-input-field {
+  text-align: center;
+  font-size: 1.8rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 10px;
+  font-family: 'Inter', monospace !important;
+  color: var(--accent-cyan) !important;
+  padding: 16px !important;
+}
+
+.otp-input-field::placeholder {
+  letter-spacing: 10px;
+  color: var(--text-muted) !important;
+  font-weight: 400 !important;
+  font-size: 1.4rem !important;
+}
+
+.otp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.otp-resend-link,
+.otp-back-link {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--duration-fast) ease;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.otp-resend-link {
+  color: var(--accent-secondary);
+}
+
+.otp-resend-link:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
+.otp-resend-link:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.otp-back-link {
+  color: var(--text-muted);
+}
+
+.otp-back-link:hover {
+  color: var(--text-secondary);
+}
+
+.otp-separator {
+  color: var(--text-muted);
+  font-size: .7rem;
+}
+
+/* ===========================================
    RESPONSIVE
    =========================================== */
 @media (max-width: 768px) {
