@@ -3,15 +3,15 @@
 // =============================================
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
-const Brevo      = require('@getbrevo/brevo');
+const SibApiV3Sdk = require('sib-api-v3-sdk');
 const { pool }   = require('../config/database');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
 
-const brevoClient = Brevo.ApiClient.instance;
-brevoClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
-const emailApi = new Brevo.TransactionalEmailsApi();
+const defaultClient = SibApiV3Sdk.ApiClient.instance;
+defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+const emailApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
 // ── Helpers ───────────────────────────────────
 

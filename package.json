@@ -13,7 +13,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@getbrevo/brevo": "^5.0.4",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -22,7 +21,8 @@
     "mysql2": "^3.22.5",
     "nodemailer": "^8.0.10",
     "react-router-dom": "^7.17.0",
-    "resend": "^6.12.4"
+    "resend": "^6.12.4",
+    "sib-api-v3-sdk": "^8.5.0"
   },
   "devDependencies": {
     "vite": "^8.0.16"
