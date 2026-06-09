@@ -1,10 +1,10 @@
 // =============================================
 // Auth Controller  —  Signup, Login, OTP Verify
 // =============================================
-const bcrypt     = require('bcrypt');
-const jwt        = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const SibApiV3Sdk = require('sib-api-v3-sdk');
-const { pool }   = require('../config/database');
+const { pool } = require('../config/database');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
@@ -32,7 +32,7 @@ function generateOTP() {
 /** Send the OTP email. */
 async function sendOTPEmail(email, otp) {
   await emailApi.sendTransacEmail({
-    sender: { email: 'youremail@gmail.com', name: 'Sprint30' },
+    sender: { email: 'sprint30web@gmail.com', name: 'Sprint30' },
     to: [{ email: email }],
     subject: 'Your OTP Verification Code',
     htmlContent: `<p>Your OTP is: <strong>${otp}</strong></p><p>Expires in 10 minutes.</p>`
@@ -90,14 +90,14 @@ const signup = async (req, res) => {
       await sendOTPEmail(email, otp);
     } catch (mailError) {
       console.error("Brevo Error:", mailError);
-      
+
       // Cleanup: we remove the user so they can try signing up again immediately
       // rather than being stuck with an unverified account where the email failed.
       await pool.execute('DELETE FROM users WHERE id = ?', [result.insertId]);
 
-      return res.status(500).json({ 
-        success: false, 
-        message: "Failed to send verification email. Please check server logs." 
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please check server logs."
       });
     }
 
@@ -234,9 +234,9 @@ const resendOtp = async (req, res) => {
       await sendOTPEmail(email, otp);
     } catch (mailError) {
       console.error("Brevo Error:", mailError);
-      return res.status(500).json({ 
-        success: false, 
-        message: "Failed to send verification email. Please check server logs." 
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please check server logs."
       });
     }
 
