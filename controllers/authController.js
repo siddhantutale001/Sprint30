@@ -3,13 +3,15 @@
 // =============================================
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
-const { Resend } = require('resend');
+const Brevo      = require('@getbrevo/brevo');
 const { pool }   = require('../config/database');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const brevoClient = Brevo.ApiClient.instance;
+brevoClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+const emailApi = new Brevo.TransactionalEmailsApi();
 
 // ── Helpers ───────────────────────────────────
 
@@ -29,11 +31,11 @@ function generateOTP() {
 
 /** Send the OTP email. */
 async function sendOTPEmail(email, otp) {
-  await resend.emails.send({
-    from: 'onboarding@resend.dev',
-    to: email,
+  await emailApi.sendTransacEmail({
+    sender: { email: 'youremail@gmail.com', name: 'Sprint30' },
+    to: [{ email: email }],
     subject: 'Your OTP Verification Code',
-    html: `<p>Your OTP is: <strong>${otp}</strong></p><p>Expires in 10 minutes.</p>`
+    htmlContent: `<p>Your OTP is: <strong>${otp}</strong></p><p>Expires in 10 minutes.</p>`
   });
 }
 
@@ -87,7 +89,7 @@ const signup = async (req, res) => {
     try {
       await sendOTPEmail(email, otp);
     } catch (mailError) {
-      console.error("Resend Error:", mailError);
+      console.error("Brevo Error:", mailError);
       
       // Cleanup: we remove the user so they can try signing up again immediately
       // rather than being stuck with an unverified account where the email failed.
@@ -231,7 +233,7 @@ const resendOtp = async (req, res) => {
     try {
       await sendOTPEmail(email, otp);
     } catch (mailError) {
-      console.error("Resend Error:", mailError);
+      console.error("Brevo Error:", mailError);
       return res.status(500).json({ 
         success: false, 
         message: "Failed to send verification email. Please check server logs." 
