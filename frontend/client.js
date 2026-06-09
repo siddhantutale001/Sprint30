@@ -8,10 +8,10 @@
 'use strict';
 
 // ── Configuration ──────────────────────────────
-const API_URL =
-  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:5000/api'
-    : 'https://sprint30.onrender.com';   // ← Replace with your Render URL
+// Automatically switches between localhost and your live backend server
+const API_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://sprint30-backend.onrender.com'; // ⚠️ Replace with your exact Render URL
 
 const TOKEN_KEY = 'sprint30_token';
 const EMAIL_KEY = 'sprint30_email';
@@ -386,7 +386,7 @@ DOM.loginForm.addEventListener('submit', async (e) => {
   setLoading(DOM.loginBtn, true);
 
   try {
-    const res = await api.post('/auth/login', { email, password });
+    const res = await api.post('/api/auth/login', { email, password });
     Auth.setSession(res.data.token, email);
     showToast('Welcome back! 🎉', 'success');
     showView('dashboard');
@@ -427,11 +427,11 @@ DOM.signupForm.addEventListener('submit', async (e) => {
   setLoading(DOM.signupBtn, true);
 
   try {
-    await api.post('/auth/signup', { email, password });
+    await api.post('/api/auth/signup', { email, password });
     showMessage(DOM.signupMsg, 'Account created! Logging you in…', 'success');
 
     // Auto-login after signup
-    const loginRes = await api.post('/auth/login', { email, password });
+    const loginRes = await api.post('/api/auth/login', { email, password });
     Auth.setSession(loginRes.data.token, email);
 
     setTimeout(() => {
@@ -679,7 +679,7 @@ function animateCounter(el, target) {
 // and progress is preserved in localStorage.
 async function syncProgressToBackend(track, dayIndex, completed) {
   try {
-    await api.post('/progress', { track, dayIndex, completed });
+    await api.post('/api/progress', { track, dayIndex, completed });
   } catch {
     // Backend endpoint may not exist yet — silently fall back to localStorage
   }
