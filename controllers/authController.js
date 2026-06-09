@@ -10,16 +10,20 @@ const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
 
 // ── Nodemailer transporter ────────────────────
-// Configured via env vars. Works with any SMTP provider
-// (Gmail, Brevo, Mailtrap, etc.)
+// Configured to be resilient on cloud platforms (e.g., Render)
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false,   // true for 465, false for 587/STARTTLS
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true for port 465, false for other ports
   auth: {
+    // Note: Kept as SMTP_USER/SMTP_PASS to match the earlier .env setup, 
+    // but you can change these to process.env.EMAIL_USER if needed.
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: {
+    rejectUnauthorized: false // Prevents local/cloud SSL handshake drops
+  }
 });
 
 // ── Helpers ───────────────────────────────────
@@ -112,9 +116,17 @@ const signup = async (req, res) => {
     // ── send OTP email ──
     try {
       await sendOTPEmail(email, otp);
-    } catch (emailErr) {
-      console.error('Failed to send OTP email:', emailErr.message);
-      // Don't fail signup — user can request resend
+    } catch (mailError) {
+      console.error("Nodemailer Error:", mailError);
+      
+      // Cleanup: we remove the user so they can try signing up again immediately
+      // rather than being stuck with an unverified account where the email failed.
+      await pool.execute('DELETE FROM users WHERE id = ?', [result.insertId]);
+
+      return res.status(500).json({ 
+        success: false, 
+        message: "Failed to send verification email. Please check server logs." 
+      });
     }
 
     return res.status(201).json({
@@ -248,11 +260,11 @@ const resendOtp = async (req, res) => {
     // ── send OTP email ──
     try {
       await sendOTPEmail(email, otp);
-    } catch (emailErr) {
-      console.error('Failed to resend OTP email:', emailErr.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to send verification email. Please try again.',
+    } catch (mailError) {
+      console.error("Nodemailer Error:", mailError);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Failed to send verification email. Please check server logs." 
       });
     }
 
