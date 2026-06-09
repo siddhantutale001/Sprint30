@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sprint30 — A 30-day technical learning roadmap dashboard. Track your daily progress across multiple learning tracks." />
+  <title>Sprint30 — 30-Day Learning Roadmap</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- =============================================
+       AUTH VIEW
+       ============================================= -->
+  <section id="auth-view" class="hidden">
+    <div class="auth-container">
+
+      <!-- Brand -->
+      <div class="auth-brand">
+        <div class="auth-brand-icon" aria-hidden="true">🚀</div>
+        <h1>Sprint30</h1>
+        <p>Master a new skill in 30 days</p>
+      </div>
+
+      <!-- Auth Card -->
+      <div class="auth-card">
+        <!-- Tab Switcher -->
+        <div class="auth-tabs" role="tablist">
+          <button class="auth-tab active" id="tab-login" role="tab" aria-selected="true" data-mode="login">Log In</button>
+          <button class="auth-tab" id="tab-signup" role="tab" aria-selected="false" data-mode="signup">Sign Up</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" autocomplete="on">
+          <div class="form-group">
+            <label for="login-email">Email Address</label>
+            <input type="email" id="login-email" name="email" placeholder="you@example.com" required autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn-primary" id="login-btn">
+            <span>Log In</span>
+          </button>
+          <div id="login-message" class="auth-message hidden"></div>
+        </form>
+
+        <!-- Signup Form -->
+        <form id="signup-form" class="hidden" autocomplete="on">
+          <div class="form-group">
+            <label for="signup-email">Email Address</label>
+            <input type="email" id="signup-email" name="email" placeholder="you@example.com" required autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label for="signup-password">Password</label>
+            <input type="password" id="signup-password" name="password" placeholder="Min 6 characters" required minlength="6" autocomplete="new-password" />
+          </div>
+          <div class="form-group">
+            <label for="signup-confirm">Confirm Password</label>
+            <input type="password" id="signup-confirm" name="confirmPassword" placeholder="••••••••" required minlength="6" autocomplete="new-password" />
+          </div>
+          <button type="submit" class="btn-primary" id="signup-btn">
+            <span>Create Account</span>
+          </button>
+          <div id="signup-message" class="auth-message hidden"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================
+       DASHBOARD VIEW
+       ============================================= -->
+  <section id="dashboard-view" class="hidden">
+
+    <!-- Sticky Header -->
+    <header class="dash-header">
+      <div class="dash-header-brand">
+        <div class="brand-mark" aria-hidden="true">🚀</div>
+        <h2>Sprint30</h2>
+      </div>
+      <div class="dash-header-right">
+        <div class="user-badge" id="user-badge">
+          <span class="avatar" id="user-avatar">U</span>
+          <span id="user-email-display">user</span>
+        </div>
+        <button class="btn-logout" id="logout-btn">Log Out</button>
+      </div>
+    </header>
+
+    <main class="dash-main">
+
+      <!-- Stats Row -->
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+          <span class="stat-icon">🔥</span>
+          <span class="stat-label">Days Completed</span>
+          <span class="stat-value" id="stat-completed">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">📈</span>
+          <span class="stat-label">Progress</span>
+          <span class="stat-value" id="stat-progress">0%</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">⏳</span>
+          <span class="stat-label">Days Remaining</span>
+          <span class="stat-value" id="stat-remaining">30</span>
+        </div>
+      </div>
+
+      <!-- Master Progress Bar -->
+      <div class="master-progress">
+        <div class="progress-header">
+          <span>Overall Progress</span>
+          <span class="progress-pct" id="progress-pct-label">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Track Selector -->
+      <div class="section-header">
+        <h3>Learning Tracks</h3>
+        <span class="section-badge" id="track-badge">All Tracks</span>
+      </div>
+      <div class="track-selector" id="track-selector">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Day Grid -->
+      <div class="section-header">
+        <h3>30-Day Roadmap</h3>
+      </div>
+      <div id="day-grid-container">
+        <!-- Loading skeleton or day grid rendered by JS -->
+      </div>
+    </main>
+  </section>
+
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="client.js"></script>
+</body>
+</html>

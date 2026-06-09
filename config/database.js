@@ -20,8 +20,8 @@ require('dotenv').config();
 function buildPoolConfig() {
   const common = {
     waitForConnections: true,   // queue callers when no connection is free
-    connectionLimit:    10,     // max simultaneous connections
-    queueLimit:         0,      // unlimited queue (0 = no limit)
+    connectionLimit: 10,     // max simultaneous connections
+    queueLimit: 0,      // unlimited queue (0 = no limit)
   };
 
   if (process.env.DATABASE_URL) {
@@ -36,16 +36,21 @@ function buildPoolConfig() {
 
   // ── Local development path ──
   return {
-    host:     process.env.DB_HOST,
-    port:     Number(process.env.DB_PORT) || 3306,
-    user:     process.env.DB_USER,
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     ...common,
   };
 }
 
-const pool = mysql.createPool(buildPoolConfig());
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // This is the magic line that stops Node from panicking
+  }
+});
 
 /**
  * Quick connectivity check — call once at startup.
