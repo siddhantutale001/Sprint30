@@ -3,28 +3,13 @@
 // =============================================
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { pool }   = require('../config/database');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
 
-// ── Nodemailer transporter ────────────────────
-// Configured to be resilient on cloud platforms (e.g., Render)
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // true for port 465, false for other ports
-  auth: {
-    // Note: Kept as SMTP_USER/SMTP_PASS to match the earlier .env setup, 
-    // but you can change these to process.env.EMAIL_USER if needed.
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false // Prevents local/cloud SSL handshake drops
-  }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── Helpers ───────────────────────────────────
 
@@ -44,26 +29,11 @@ function generateOTP() {
 
 /** Send the OTP email. */
 async function sendOTPEmail(email, otp) {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-  await transporter.sendMail({
-    from: `"Sprint30" <${from}>`,
+  await resend.emails.send({
+    from: 'onboarding@resend.dev',
     to: email,
-    subject: 'Sprint30 — Your Verification Code',
-    html: `
-      <div style="font-family: 'Inter', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #111827; border-radius: 16px; color: #f1f5f9;">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <div style="font-size: 48px;">🚀</div>
-          <h1 style="font-size: 24px; font-weight: 800; background: linear-gradient(135deg, #6366f1, #22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 12px 0 4px;">Sprint30</h1>
-          <p style="color: #94a3b8; font-size: 14px;">Email Verification</p>
-        </div>
-        <div style="background: #1a2236; border: 1px solid rgba(148,163,184,0.12); border-radius: 12px; padding: 24px; text-align: center;">
-          <p style="color: #94a3b8; font-size: 14px; margin-bottom: 16px;">Enter this code to verify your account:</p>
-          <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #a5b4fc; padding: 16px; background: #0f172a; border-radius: 8px; display: inline-block;">${otp}</div>
-          <p style="color: #64748b; font-size: 12px; margin-top: 16px;">This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
-        </div>
-        <p style="color: #64748b; font-size: 12px; text-align: center; margin-top: 24px;">If you didn't sign up for Sprint30, you can safely ignore this email.</p>
-      </div>
-    `,
+    subject: 'Your OTP Verification Code',
+    html: `<p>Your OTP is: <strong>${otp}</strong></p><p>Expires in 10 minutes.</p>`
   });
 }
 
@@ -117,7 +87,7 @@ const signup = async (req, res) => {
     try {
       await sendOTPEmail(email, otp);
     } catch (mailError) {
-      console.error("Nodemailer Error:", mailError);
+      console.error("Resend Error:", mailError);
       
       // Cleanup: we remove the user so they can try signing up again immediately
       // rather than being stuck with an unverified account where the email failed.
@@ -261,7 +231,7 @@ const resendOtp = async (req, res) => {
     try {
       await sendOTPEmail(email, otp);
     } catch (mailError) {
-      console.error("Nodemailer Error:", mailError);
+      console.error("Resend Error:", mailError);
       return res.status(500).json({ 
         success: false, 
         message: "Failed to send verification email. Please check server logs." 
